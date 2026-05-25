@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Danmaku Copilot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dc-popup">
+  <main>
+    <header>
+      <h1>Danmaku Copilot</h1>
+      <p id="statusText">读取中...</p>
+    </header>
+
+    <label class="dc-switch-card">
+      <span>
+        <strong>总开关</strong>
+        <small id="switchHint">开启后点击弹幕框会生成草稿</small>
+      </span>
+      <input id="enabledToggle" type="checkbox">
+      <span class="dc-switch" aria-hidden="true"></span>
+    </label>
+
+    <label>
+      <span>当前风格</span>
+      <select id="styleSelect"></select>
+    </label>
+
+    <dl>
+      <div>
+        <dt>自动填入</dt>
+        <dd id="autoFillText">-</dd>
+      </div>
+      <div>
+        <dt>冷却时间</dt>
+        <dd id="cooldownText">-</dd>
+      </div>
+      <div>
+        <dt>最近结果</dt>
+        <dd id="lastResultText">-</dd>
+      </div>
+    </dl>
+
+    <button id="openOptionsButton" type="button">打开设置</button>
+  </main>
+
+  <script src="constants.js"></script>
+  <script src="utils/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

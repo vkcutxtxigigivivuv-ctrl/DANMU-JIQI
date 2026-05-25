@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Danmaku Copilot 设置</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dc-page">
+  <main class="dc-shell">
+    <header class="dc-header">
+      <div>
+        <h1>Danmaku Copilot</h1>
+        <p>腾讯视频弹幕草稿助手</p>
+      </div>
+      <span id="saveStatus" class="dc-status">未保存</span>
+    </header>
+
+    <form id="settingsForm" class="dc-form">
+      <section class="dc-section">
+        <h2>API 设置</h2>
+        <label>
+          <span>API Provider</span>
+          <select name="apiProvider">
+            <option value="openai">OpenAI Compatible</option>
+          </select>
+        </label>
+        <label>
+          <span>API Key</span>
+          <input name="apiKey" type="password" autocomplete="off" placeholder="sk-...">
+        </label>
+        <label>
+          <span>API Base URL</span>
+          <input name="apiBaseUrl" type="url" placeholder="https://api.openai.com/v1">
+        </label>
+        <label>
+          <span>Model</span>
+          <input name="model" type="text" placeholder="gpt-5.5-mini">
+        </label>
+      </section>
+
+      <section class="dc-section">
+        <h2>生成设置</h2>
+        <label>
+          <span>默认风格</span>
+          <select name="style" id="styleSelect"></select>
+        </label>
+        <label>
+          <span>最大字数</span>
+          <input name="maxChars" type="number" min="8" max="25" step="1">
+        </label>
+        <label>
+          <span>冷却时间（秒）</span>
+          <input name="cooldownSeconds" type="number" min="1" max="120" step="1">
+        </label>
+        <label class="dc-check">
+          <input name="enabled" type="checkbox">
+          <span>启用插件</span>
+        </label>
+        <label class="dc-check">
+          <input name="autoGenerateOnFocus" type="checkbox">
+          <span>点击输入框时自动生成</span>
+        </label>
+        <label class="dc-check">
+          <input name="autoFill" type="checkbox">
+          <span>生成后自动填入输入框</span>
+        </label>
+      </section>
+
+      <section class="dc-section">
+        <h2>安全与快捷键</h2>
+        <label class="dc-check">
+          <input name="avoidSpoiler" type="checkbox">
+          <span>避免剧透</span>
+        </label>
+        <label class="dc-check">
+          <input name="avoidAdTone" type="checkbox">
+          <span>避免广告感</span>
+        </label>
+        <label class="dc-check">
+          <input name="enableHotkeys" type="checkbox">
+          <span>启用 Alt + R/C/T/E/D/A 快捷键</span>
+        </label>
+        <label class="dc-check">
+          <input name="showToast" type="checkbox">
+          <span>显示页面提示</span>
+        </label>
+      </section>
+
+      <div class="dc-actions">
+        <button type="submit">保存设置</button>
+        <button id="resetButton" type="button" class="secondary">恢复默认</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="constants.js"></script>
+  <script src="utils/storage.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
