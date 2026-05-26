@@ -1,5 +1,10 @@
 (function attachDanmakuStorage(global) {
-  const { DEFAULT_SETTINGS } = global.DanmakuCopilotConstants;
+  const { AI_PROVIDERS, DEFAULT_SETTINGS } = global.DanmakuCopilotConstants;
+  const LEGACY_MODEL_NAMES = new Set([
+    "gpt-5.5-mini",
+    "gpt-5.5",
+    "gpt-4.5-mini"
+  ]);
 
   async function getSettings() {
     const stored = await chrome.storage.local.get(DEFAULT_SETTINGS);
@@ -26,11 +31,17 @@
     }
 
     merged.cooldownMs = clampNumber(merged.cooldownMs, 1000, 120000, DEFAULT_SETTINGS.cooldownMs);
+    merged.poolWaitMs = clampNumber(merged.poolWaitMs, 0, 15000, DEFAULT_SETTINGS.poolWaitMs);
     merged.maxChars = clampNumber(merged.maxChars, 8, 25, DEFAULT_SETTINGS.maxChars);
-    merged.apiBaseUrl = String(merged.apiBaseUrl || DEFAULT_SETTINGS.apiBaseUrl).replace(/\/+$/, "");
-    merged.model = String(merged.model || DEFAULT_SETTINGS.model).trim();
+    merged.apiProvider = AI_PROVIDERS[merged.apiProvider] ? merged.apiProvider : DEFAULT_SETTINGS.apiProvider;
+    merged.apiBaseUrl = String(merged.apiBaseUrl || AI_PROVIDERS[merged.apiProvider]?.apiBaseUrl || DEFAULT_SETTINGS.apiBaseUrl).replace(/\/+$/, "");
+    merged.model = String(merged.model || AI_PROVIDERS[merged.apiProvider]?.model || DEFAULT_SETTINGS.model).trim();
+    if (LEGACY_MODEL_NAMES.has(merged.model)) {
+      merged.model = DEFAULT_SETTINGS.model;
+    }
     merged.style = String(merged.style || DEFAULT_SETTINGS.style);
     merged.apiKey = String(merged.apiKey || "").trim();
+    merged.forceNewPoolPerEpisode = merged.forceNewPoolPerEpisode !== false;
     return merged;
   }
 
@@ -44,6 +55,7 @@
     getSettings,
     saveSettings,
     resetSettings,
-    normalizeSettings
+    normalizeSettings,
+    getProviderDefaults: (provider) => AI_PROVIDERS[provider] || AI_PROVIDERS.openai
   };
 })(globalThis);

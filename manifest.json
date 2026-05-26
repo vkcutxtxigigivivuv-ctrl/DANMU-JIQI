@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Danmaku Copilot",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "点击弹幕输入框后，AI 自动生成自然中文弹幕并填入草稿。",
   "icons": {
     "16": "icons/icon-16.png",
@@ -12,7 +12,11 @@
   "host_permissions": [
     "https://v.qq.com/*",
     "https://*.qq.com/*",
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "https://api.deepseek.com/*",
+    "https://dashscope.aliyuncs.com/*",
+    "https://open.bigmodel.cn/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "src/background.js"

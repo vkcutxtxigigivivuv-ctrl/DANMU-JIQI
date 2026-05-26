@@ -1,11 +1,19 @@
 (function initOptionsPage() {
-  const { DANMAKU_STYLES, MESSAGE_TYPES } = globalThis.DanmakuCopilotConstants;
-  const { normalizeSettings } = globalThis.DanmakuCopilotStorage;
+  const { AI_PROVIDERS, DANMAKU_STYLES, MESSAGE_TYPES } = globalThis.DanmakuCopilotConstants;
+  const { getProviderDefaults, normalizeSettings } = globalThis.DanmakuCopilotStorage;
 
   const form = document.querySelector("#settingsForm");
   const status = document.querySelector("#saveStatus");
   const resetButton = document.querySelector("#resetButton");
+  const apiProviderSelect = document.querySelector("#apiProviderSelect");
   const styleSelect = document.querySelector("#styleSelect");
+
+  Object.entries(AI_PROVIDERS).forEach(([value, provider]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = provider.label;
+    apiProviderSelect.appendChild(option);
+  });
 
   Object.entries(DANMAKU_STYLES).forEach(([value, label]) => {
     const option = document.createElement("option");
@@ -16,10 +24,15 @@
 
   loadSettings();
 
+  apiProviderSelect.addEventListener("change", () => {
+    applyProviderDefaults(apiProviderSelect.value);
+    setStatus("已切换服务商，记得保存");
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const payload = readForm();
-    const saved = await sendMessage({ type: MESSAGE_TYPES.saveSettings, payload });
+    const saved = await sendMessage({ type: MESSAGE_TYPES.saveSettings || "SAVE_SETTINGS", payload });
     fillForm(saved);
     setStatus("已保存");
   });
@@ -31,7 +44,7 @@
   });
 
   async function loadSettings() {
-    const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings });
+    const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings || "GET_SETTINGS" });
     fillForm(settings);
     setStatus("已加载");
   }
@@ -48,7 +61,9 @@
       model: data.get("model"),
       style: data.get("style"),
       cooldownSeconds: Number(data.get("cooldownSeconds")),
+      poolWaitMs: Number(data.get("poolWaitSeconds")) * 1000,
       maxChars: Number(data.get("maxChars")),
+      forceNewPoolPerEpisode: data.has("forceNewPoolPerEpisode"),
       avoidSpoiler: data.has("avoidSpoiler"),
       avoidAdTone: data.has("avoidAdTone"),
       enableHotkeys: data.has("enableHotkeys"),
@@ -65,15 +80,25 @@
     form.elements.model.value = normalized.model;
     form.elements.style.value = normalized.style;
     form.elements.cooldownSeconds.value = Math.round(normalized.cooldownMs / 1000);
+    form.elements.poolWaitSeconds.value = Math.round(normalized.poolWaitMs / 1000);
     form.elements.maxChars.value = normalized.maxChars;
 
     form.elements.enabled.checked = normalized.enabled;
     form.elements.autoGenerateOnFocus.checked = normalized.autoGenerateOnFocus;
     form.elements.autoFill.checked = normalized.autoFill;
+    form.elements.forceNewPoolPerEpisode.checked = normalized.forceNewPoolPerEpisode;
     form.elements.avoidSpoiler.checked = normalized.avoidSpoiler;
     form.elements.avoidAdTone.checked = normalized.avoidAdTone;
     form.elements.enableHotkeys.checked = normalized.enableHotkeys;
     form.elements.showToast.checked = normalized.showToast;
+    form.elements.apiKey.placeholder = getProviderDefaults(normalized.apiProvider).keyPlaceholder;
+  }
+
+  function applyProviderDefaults(provider) {
+    const defaults = getProviderDefaults(provider);
+    if (defaults.apiBaseUrl) form.elements.apiBaseUrl.value = defaults.apiBaseUrl;
+    if (defaults.model) form.elements.model.value = defaults.model;
+    form.elements.apiKey.placeholder = defaults.keyPlaceholder;
   }
 
   function setStatus(text) {

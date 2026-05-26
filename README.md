@@ -56,7 +56,15 @@
 
 ## OpenAI 兼容接口
 
-默认请求地址是 `https://api.openai.com/v1/chat/completions`。如果使用其他兼容 OpenAI Chat Completions 的服务，可以在设置页修改 API Base URL 和模型名称。
+默认请求地址是 `https://api.openai.com/v1/chat/completions`，默认模型是 `gpt-4o-mini`。如果使用其他兼容 OpenAI Chat Completions 的服务，可以在设置页修改 API Provider、API Base URL 和模型名称。
+
+内置服务商预设：
+
+- OpenAI：`https://api.openai.com/v1`，默认模型 `gpt-4o-mini`
+- DeepSeek：`https://api.deepseek.com/v1`，默认模型 `deepseek-chat`
+- 通义千问 DashScope：`https://dashscope.aliyuncs.com/compatible-mode/v1`，默认模型 `qwen-plus`
+- 智谱 GLM：`https://open.bigmodel.cn/api/paas/v4`，默认模型 `glm-4-flash`
+- 自定义兼容接口：手动填写 Base URL 和模型名称
 
 未填写 API Key 或接口失败时，插件会使用本地兜底弹幕库，不会反复重试刷接口。
 

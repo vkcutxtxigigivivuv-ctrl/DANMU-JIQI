@@ -21,13 +21,11 @@
         <h2>API 设置</h2>
         <label>
           <span>API Provider</span>
-          <select name="apiProvider">
-            <option value="openai">OpenAI Compatible</option>
-          </select>
+          <select name="apiProvider" id="apiProviderSelect"></select>
         </label>
         <label>
           <span>API Key</span>
-          <input name="apiKey" type="password" autocomplete="off" placeholder="sk-...">
+          <input name="apiKey" id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-...">
         </label>
         <label>
           <span>API Base URL</span>
@@ -35,7 +33,7 @@
         </label>
         <label>
           <span>Model</span>
-          <input name="model" type="text" placeholder="gpt-5.5-mini">
+          <input name="model" type="text" placeholder="gpt-4o-mini">
         </label>
       </section>
 
@@ -53,6 +51,10 @@
           <span>冷却时间（秒）</span>
           <input name="cooldownSeconds" type="number" min="1" max="120" step="1">
         </label>
+        <label>
+          <span>切集后等待生成（秒）</span>
+          <input name="poolWaitSeconds" type="number" min="0" max="15" step="1">
+        </label>
         <label class="dc-check">
           <input name="enabled" type="checkbox">
           <span>启用插件</span>
@@ -64,6 +66,10 @@
         <label class="dc-check">
           <input name="autoFill" type="checkbox">
           <span>生成后自动填入输入框</span>
+        </label>
+        <label class="dc-check">
+          <input name="forceNewPoolPerEpisode" type="checkbox">
+          <span>每集必须重新生成弹幕池</span>
         </label>
       </section>
 

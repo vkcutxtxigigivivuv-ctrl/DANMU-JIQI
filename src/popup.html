@@ -27,18 +27,46 @@
       <select id="styleSelect"></select>
     </label>
 
+    <section class="dc-popup-section" aria-label="API Key 快速设置">
+      <div class="dc-popup-section-head">
+        <strong>API Key</strong>
+        <span id="apiKeyStatus">未设置</span>
+      </div>
+      <label class="dc-api-key-field">
+        <span>服务商</span>
+        <select id="apiProviderSelect"></select>
+      </label>
+      <label class="dc-api-key-field">
+        <span id="apiKeyLabel">OpenAI 或兼容接口 Key</span>
+        <input id="apiKeyInput" type="password" autocomplete="off" placeholder="粘贴后保存，不会显示明文">
+      </label>
+      <div class="dc-popup-button-row">
+        <button id="saveApiKeyButton" type="button" class="secondary">保存 API Key</button>
+        <button id="testApiButton" type="button" class="secondary">测试 API</button>
+      </div>
+      <p id="apiTestStatus" class="dc-mini-status">未测试</p>
+    </section>
+
     <dl>
       <div>
         <dt>自动填入</dt>
         <dd id="autoFillText">-</dd>
       </div>
       <div>
-        <dt>冷却时间</dt>
+        <dt>冷却/等待</dt>
         <dd id="cooldownText">-</dd>
       </div>
       <div>
         <dt>最近结果</dt>
         <dd id="lastResultText">-</dd>
+      </div>
+      <div>
+        <dt>最近来源</dt>
+        <dd id="lastSourceText">-</dd>
+      </div>
+      <div>
+        <dt>最近错误</dt>
+        <dd id="lastErrorText">-</dd>
       </div>
     </dl>
 

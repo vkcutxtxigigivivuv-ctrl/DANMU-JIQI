@@ -233,6 +233,70 @@ button.secondary {
   transform: translateX(20px);
 }
 
+.dc-popup-section {
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.dc-popup-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dc-popup-section-head strong {
+  color: #111827;
+}
+
+.dc-popup-section-head span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.dc-api-key-field {
+  margin-bottom: 8px !important;
+}
+
+.dc-api-key-field span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dc-api-key-field input,
+.dc-api-key-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #cfd7e3;
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: #111827;
+  background: #fff;
+  font: inherit;
+}
+
+.dc-popup-section button {
+  width: 100%;
+}
+
+.dc-popup-button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.dc-mini-status {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .dc-popup dl {
   margin: 14px 0;
   border-top: 1px solid #e5e7eb;

@@ -45,7 +45,35 @@
     ];
   }
 
+  function buildDanmakuPoolMessages(context, settings, count = 18) {
+    const styleName = DANMAKU_STYLES[context.style || settings.style] || DANMAKU_STYLES.natural;
+    const system = "你是一个中文影视弹幕助手。你的任务是批量生成自然、短促、像真实观众会发的中文弹幕。不要解释，不要编号之外的说明。";
+    const user = [
+      `请根据以下信息生成 ${count} 句不同的中文弹幕。`,
+      "",
+      "要求：",
+      `1. 每句 8到${settings.maxChars || 18}个中文字符左右。`,
+      "2. 每句都要自然、口语化，像普通观众。",
+      "3. 不要像广告，不要剧透后续剧情。",
+      "4. 不要攻击演员、导演或现实人物。",
+      "5. 不要引导刷屏，不要出现违法、低俗、仇恨、骚扰内容。",
+      "6. 句子之间尽量表达不同角度，不要重复同一个模板。",
+      "7. 每行只输出一句弹幕，不要加解释。",
+      "",
+      `视频标题：${context.title || "未知"}`,
+      `当前播放时间：${context.currentTime || "未知"}`,
+      `页面上下文：${context.pageContext || "无"}`,
+      `弹幕风格：${styleName}`
+    ].join("\n");
+
+    return [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ];
+  }
+
   global.DanmakuCopilotPromptBuilder = {
-    buildDanmakuMessages
+    buildDanmakuMessages,
+    buildDanmakuPoolMessages
   };
 })(globalThis);

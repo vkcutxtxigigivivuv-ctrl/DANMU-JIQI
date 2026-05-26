@@ -13,8 +13,14 @@
   let lastGenerateTime = 0;
   let lastFocusedInput = null;
   let lastInjectedText = "";
+  let lastPreparedEpisodeKey = "";
+  let activeEpisodeKey = "";
+  let activePreparePromise = null;
+  let activePrepareContext = null;
+  const failedPrepareAtByKey = new Map();
   let activeRequestId = 0;
   let observer = null;
+  let prepareTimer = null;
   let toastTimer = null;
 
   console.info("[Danmaku Copilot] loaded");
@@ -25,11 +31,16 @@
     bindExistingInputs();
     observePageChanges();
     bindHotkeys();
+    bindNavigationWatchers();
+    schedulePoolPrepare("init");
   }
 
   function observePageChanges() {
     if (!document.body) return;
-    observer = new MutationObserver(() => bindExistingInputs());
+    observer = new MutationObserver(() => {
+      bindExistingInputs();
+      schedulePoolPrepare("mutation");
+    });
     observer.observe(document.body, {
       childList: true,
       subtree: true
@@ -50,7 +61,7 @@
     lastFocusedInput = input;
     console.info("[Danmaku Copilot] danmaku input focused");
 
-    const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings });
+    const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings || "GET_SETTINGS" });
     if (!settings?.enabled || !settings.autoGenerateOnFocus) return;
     if (!isInputEmpty(input)) return;
     if (Date.now() - lastGenerateTime < settings.cooldownMs) return;
@@ -61,7 +72,7 @@
   async function requestAndApplyDanmaku({ input, style, trigger, force }) {
     if (!input || !isEditableTarget(input)) return;
 
-    const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings });
+    const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings || "GET_SETTINGS" });
     if (!settings?.enabled) return;
 
     if (!force && !isInputEmpty(input)) return;
@@ -72,10 +83,11 @@
     showToast("AI 弹幕生成中...");
 
     const context = collectPageContext(style || settings.style, trigger);
+    await waitForEpisodePoolIfNeeded(context, settings);
     console.info("[Danmaku Copilot] context", context);
 
     const result = await sendMessage({
-      type: MESSAGE_TYPES.generateDanmaku,
+      type: MESSAGE_TYPES.generateDanmaku || "GENERATE_DANMAKU",
       payload: context
     });
 
@@ -90,7 +102,7 @@
       if (force || isInputEmpty(input) || getInputValue(input) === lastInjectedText) {
         setInputValue(input, result.text);
         lastInjectedText = result.text;
-        showToast(result.source === "fallback" && result.error ? "生成失败，已使用本地弹幕" : "已填入弹幕，按 Enter 发送");
+        showToast(getResultToast(result));
       }
     } else {
       showCandidatePanel(input, result.text);
@@ -105,11 +117,152 @@
       url: location.href,
       currentTime: videoTime?.formatted || "",
       currentTimeSeconds: videoTime?.seconds || 0,
+      videoSrc: getCurrentVideoSource(),
       pageContext: getVisiblePageText(),
       style,
       source: "v.qq.com",
       trigger
     };
+  }
+
+  function bindNavigationWatchers() {
+    ["pushState", "replaceState"].forEach((methodName) => {
+      const original = history[methodName];
+      history[methodName] = function patchedHistoryMethod(...args) {
+        const value = original.apply(this, args);
+        schedulePoolPrepare(methodName);
+        return value;
+      };
+    });
+
+    window.addEventListener("popstate", () => schedulePoolPrepare("popstate"));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) schedulePoolPrepare("visible");
+    });
+    setInterval(() => schedulePoolPrepare("interval"), 5000);
+  }
+
+  function schedulePoolPrepare(trigger, knownContext) {
+    clearTimeout(prepareTimer);
+    prepareTimer = setTimeout(() => prepareDanmakuPool(trigger, knownContext), 900);
+  }
+
+  async function prepareDanmakuPool(trigger, knownContext) {
+    const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings || "GET_SETTINGS" });
+    if (!settings?.enabled) return;
+
+    const context = knownContext || collectPageContext(settings.style, `pool-${trigger}`);
+    const episodeKey = getEpisodeKey(context);
+    if (!episodeKey) return;
+    if (episodeKey !== activeEpisodeKey) {
+      activeEpisodeKey = episodeKey;
+      lastPreparedEpisodeKey = "";
+      failedPrepareAtByKey.delete(episodeKey);
+      activePrepareContext = context;
+      if (settings.forceNewPoolPerEpisode) {
+        await sendMessage({
+          type: MESSAGE_TYPES.resetDanmakuPool || "RESET_DANMAKU_POOL",
+          payload: context
+        });
+      }
+      showToast("新一集弹幕池生成中...");
+    }
+
+    if (episodeKey === lastPreparedEpisodeKey) return;
+    if (isInPrepareFailureCooldown(episodeKey)) return;
+
+    activePrepareContext = context;
+    activePreparePromise = sendMessage({
+      type: MESSAGE_TYPES.prepareDanmakuPool || "PREPARE_DANMAKU_POOL",
+      payload: {
+        ...context,
+        forceNewPool: settings.forceNewPoolPerEpisode
+      }
+    }).finally(() => {
+      activePreparePromise = null;
+    });
+
+    const result = await activePreparePromise;
+
+    if (result?.ok && !result.reused) {
+      lastPreparedEpisodeKey = episodeKey;
+      failedPrepareAtByKey.delete(episodeKey);
+      console.info("[Danmaku Copilot] danmaku pool prepared", result);
+      return;
+    }
+
+    if (result?.ok && result.reused) {
+      lastPreparedEpisodeKey = episodeKey;
+      failedPrepareAtByKey.delete(episodeKey);
+      return;
+    }
+
+    failedPrepareAtByKey.set(episodeKey, Date.now());
+    console.info("[Danmaku Copilot] danmaku pool not prepared", result);
+  }
+
+  async function waitForEpisodePoolIfNeeded(context, settings) {
+    const episodeKey = getEpisodeKey(context);
+
+    if (episodeKey && episodeKey !== activeEpisodeKey) {
+      await prepareDanmakuPool("focus-new-episode", context);
+    }
+
+    const currentKey = getEpisodeKey(activePrepareContext || {});
+    if (!activePreparePromise || currentKey !== episodeKey || settings.poolWaitMs <= 0) return;
+
+    showToast("等弹幕池生成一下...");
+    await Promise.race([
+      activePreparePromise,
+      delay(settings.poolWaitMs)
+    ]);
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function getEpisodeKey(context) {
+    const url = normalizeEpisodeUrl(context.url);
+    const title = String(context.title || "").trim();
+    const videoSrc = String(context.videoSrc || "").split("#")[0];
+    if (!url && !title && !videoSrc) return "";
+    return `${context.style || "natural"}::${title}::${url}::${videoSrc}`;
+  }
+
+  function normalizeEpisodeUrl(rawUrl) {
+    let parsedUrl;
+
+    try {
+      parsedUrl = new URL(rawUrl || location.href);
+    } catch (_) {
+      return String(rawUrl || "").split("#")[0];
+    }
+
+    const ignoredParams = [
+      "ptag",
+      "from",
+      "channel",
+      "share",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign"
+    ];
+    ignoredParams.forEach((param) => parsedUrl.searchParams.delete(param));
+    parsedUrl.hash = "";
+    return parsedUrl.toString();
+  }
+
+  function isInPrepareFailureCooldown(episodeKey) {
+    const failedAt = failedPrepareAtByKey.get(episodeKey);
+    if (!failedAt) return false;
+
+    if (Date.now() - failedAt > 60000) {
+      failedPrepareAtByKey.delete(episodeKey);
+      return false;
+    }
+
+    return true;
   }
 
   function getVideoTitle() {
@@ -133,6 +286,11 @@
     };
   }
 
+  function getCurrentVideoSource() {
+    const video = document.querySelector("video");
+    return video?.currentSrc || video?.src || "";
+  }
+
   function getVisiblePageText() {
     const text = (document.body?.innerText || "")
       .replace(/\s+/g, " ")
@@ -145,7 +303,7 @@
       if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (!lastFocusedInput || document.activeElement !== lastFocusedInput) return;
 
-      const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings });
+      const settings = await sendMessage({ type: MESSAGE_TYPES.getSettings || "GET_SETTINGS" });
       if (!settings?.enableHotkeys) return;
 
       const key = event.key.toLowerCase();
@@ -188,7 +346,7 @@
   }
 
   function showToast(message) {
-    sendMessage({ type: MESSAGE_TYPES.getSettings }).then((settings) => {
+    sendMessage({ type: MESSAGE_TYPES.getSettings || "GET_SETTINGS" }).then((settings) => {
       if (settings && settings.showToast === false) return;
 
       let toast = document.querySelector(".danmaku-copilot-toast");
@@ -227,6 +385,26 @@
       panel.remove();
       showToast("已填入弹幕，按 Enter 发送");
     };
+  }
+
+  function getResultToast(result) {
+    if (result.source !== "fallback" || !result.error) {
+      return "已填入弹幕，按 Enter 发送";
+    }
+
+    if (result.error === "Missing API key") {
+      return "未设置 API Key，已使用本地弹幕";
+    }
+
+    if (/model|404|not found|does not exist/i.test(result.error)) {
+      return "模型不可用，已使用本地弹幕";
+    }
+
+    if (/401|403|quota|billing|insufficient|invalid api key/i.test(result.error)) {
+      return "API Key 或额度异常，已使用本地弹幕";
+    }
+
+    return "接口失败，已使用本地弹幕";
   }
 
   function sendMessage(message) {
